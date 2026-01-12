@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instalaciones Eléctricas</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+
+    <style>
+        /* --- ESTILOS VISUALES --- */
+        :root { --color-principal: #5eff00; --color-fondo: #000; --texto-claro: #fff; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background-color: var(--color-fondo); color: var(--texto-claro); background-image: url('logo.jpeg'); background-attachment: fixed; background-position: center; background-size: cover; }
+        .overlay { background-color: rgba(0, 0, 0, 0.94); min-height: 100vh; padding-bottom: 80px; }
+        
+        nav { background: #000; padding: 15px; position: sticky; top: 0; z-index: 1000; border-bottom: 2px solid var(--color-principal); }
+        nav ul { list-style: none; display: flex; justify-content: center; gap: 20px; padding: 0; flex-wrap: wrap; margin: 0; }
+        nav a { color: #fff; text-decoration: none; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        nav a:hover { color: var(--color-principal); }
+
+        section { padding: 40px 20px; max-width: 1100px; margin: 0 auto; text-align: center; }
+        h2 { color: var(--color-principal); border-bottom: 2px solid var(--color-principal); display: inline-block; padding-bottom: 5px; margin-bottom: 30px; }
+
+        /* IMÁGENES Y TARJETAS */
+        .img-controlada { width: 100%; height: 200px; object-fit: cover; border-radius: 5px; background-color: #222; border-bottom: 1px solid #333; }
+        .productos-grid, .galeria-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 25px; }
+        .producto-card { background: #151515; border: 1px solid #333; border-radius: 10px; overflow: hidden; transition: transform 0.3s; }
+        .producto-card:hover { transform: translateY(-5px); border-color: var(--color-principal); }
+        .info-prod { padding: 15px; }
+        .precio { font-size: 1.4rem; color: var(--color-principal); font-weight: bold; margin: 10px 0; }
+
+        /* ESTILOS DE CARPETAS (NUEVO) */
+        .carpetas-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        .btn-carpeta {
+            background-color: #222;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
+        }
+        .btn-carpeta:hover, .btn-carpeta.activo {
+            background-color: var(--color-principal);
+            color: #000;
+            border-color: var(--color-principal);
+            font-weight: bold;
+        }
+
+        /* Resto de estilos */
+        .galeria-item { position: relative; border: 1px solid #333; border-radius: 8px; overflow: hidden; }
+        .btn { background-color: var(--color-principal); color: #000; border: none; padding: 10px; cursor: pointer; width: 100%; font-weight: bold; border-radius: 5px; margin-top: 5px; text-transform: uppercase; }
+        .btn:hover { background-color: #fff; }
+        .btn-danger { background-color: #ff3333; color: white; margin-top: 10px; }
+        .btn:disabled { background-color: #555; cursor: not-allowed; }
+        .panel-admin { border: 2px dashed var(--color-principal); padding: 20px; background: #1a1a1a; margin-bottom: 30px; text-align: left; border-radius: 10px; }
+        input, textarea, select { width: 100%; padding: 10px; margin: 8px 0; background: #333; border: 1px solid #555; color: white; border-radius: 5px; box-sizing: border-box; }
+        .admin-only { display: none !important; }
+        body.is-admin .admin-only { display: block !important; }
+        
+        .whatsapp-float { position: fixed; bottom: 20px; right: 20px; background: #25d366; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 2000; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: transform 0.3s; }
+        .whatsapp-float:hover { transform: scale(1.1); }
+        .whatsapp-icon { width: 35px; height: 35px; fill: white; }
+        #carrito-flotante { position: fixed; bottom: 20px; left: 20px; background: #fff; color: #000; padding: 20px; border-radius: 10px; display: none; z-index: 2000; width: 280px; box-shadow: 0 0 15px var(--color-principal); }
+        .cargando { color: #888; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<div class="overlay">
+    <nav>
+        <ul>
+            <li><a href="#inicio">Inicio</a></li>
+            <li><a href="#tienda">Tienda</a></li>
+            <li><a href="#galeria">Galería</a></li>
+            <li><a href="#resenas">Reseñas</a></li>
+            <li><a href="#contacto">Contacto</a></li>
+        </ul>
+    </nav>
+
+    <section id="inicio">
+        <h1>Electricidad Profesional</h1>
+        <img src="logo.jpeg" alt="Logo" style="width: 150px; height:150px; object-fit:cover; border-radius: 50%; border: 4px solid var(--color-principal);">
+        <div id="texto-nosotros" style="font-size: 1.2rem; margin-top: 20px;">
+            <p id="parrafo-inicio">Cargando información...</p>
+        </div>
+        <button onclick="editarTexto()" class="btn admin-only" style="width: auto; margin-top:20px;">✏️ Editar Texto</button>
+    </section>
+
+    <section id="tienda">
+        <h2>Tienda Online</h2>
+
+        <div class="panel-admin admin-only">
+            <h3>+ Añadir Nuevo Producto</h3>
+            <label>Nombre:</label> <input type="text" id="prodNombre">
+            <label>Precio (€):</label> <input type="number" id="prodPrecio">
+            <label>Nombre de la Carpeta (Categoría):</label> 
+            <input type="text" id="prodCategoria" placeholder="Ej: Cables, Bombillas, Herramientas...">
+            
+            <label>Foto:</label> <input type="file" id="prodFoto" accept="image/*">
+            <button class="btn" id="btnCrearProd" onclick="crearProducto()">Guardar Producto</button>
+        </div>
+
+        <div id="contenedor-carpetas" class="carpetas-container">
+            </div>
+
+        <div class="productos-grid" id="lista-productos"><p class="cargando">Conectando con la tienda...</p></div>
+    </section>
+
+    <section id="galeria">
+        <h2>Nuestros Trabajos</h2>
+        <div class="panel-admin admin-only">
+            <h3>+ Subir Foto a Galería</h3>
+            <input type="file" id="inputFotoGaleria" accept="image/*">
+            <button class="btn" id="btnSubirGaleria" onclick="subirFotoGaleria()">Subir Foto</button>
+        </div>
+        <div class="galeria-grid" id="contenedor-galeria"><p class="cargando">Cargando fotos...</p></div>
+    </section>
+
+    <section id="resenas">
+        <h2>Opiniones</h2>
+        <div style="background: #222; padding: 20px; border-radius: 10px; text-align: left;">
+            <input type="text" id="nombreResena" placeholder="Tu Nombre">
+            <textarea id="textoResena" placeholder="Escribe tu opinión..."></textarea>
+            <button class="btn" onclick="publicarResena()">Publicar Reseña</button>
+        </div>
+        <div id="lista-resenas" style="margin-top:20px; text-align: left;"><p class="cargando">Cargando opiniones...</p></div>
+    </section>
+
+    <section id="contacto">
+        <h2>Contacto</h2>
+        <p>Llámanos o escríbenos por WhatsApp para un presupuesto personalizado.</p>
+        <button class="btn" style="width: auto; padding: 15px 30px;" onclick="window.open('https://wa.me/34698906201', '_blank')">Contactar al WhatsApp</button>
+    </section>
+
+    <footer style="margin-top: 50px; text-align: center; color: #555; padding: 20px;">
+        <span onclick="intentarLogin()" style="cursor: pointer;">🔒 Admin</span> | &copy; 2026 Electricidad
+    </footer>
+</div>
+
+<a href="https://wa.me/34698906201" class="whatsapp-float" target="_blank">
+    <svg class="whatsapp-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+</a>
+
+<div id="carrito-flotante">
+    <h3 style="margin-top:0">Tu Pedido</h3>
+    <ul id="lista-carrito" style="padding-left: 20px; max-height: 200px; overflow-y: auto;"></ul>
+    <p>Total: <strong><span id="total-carrito">0</span> €</strong></p>
+    <button class="btn" onclick="enviarPedidoWhatsApp()">Pedir por WhatsApp</button>
+    <button class="btn btn-danger" onclick="limpiarCarrito()" style="margin-top:5px; font-size:0.8rem;">Vaciar</button>
+</div>
+
+<script>
+    // 1. CONFIGURACIÓN
+    const firebaseConfig = {
+      apiKey: "AIzaSyCN148goDCis9_I4bWP6pGa5_kf4Zce1g8",
+      authDomain: "electricidad-a21ba.firebaseapp.com",
+      projectId: "electricidad-a21ba",
+      storageBucket: "electricidad-a21ba.firebasestorage.app",
+      messagingSenderId: "1058554836478",
+      appId: "1:1058554836478:web:fda5f537df5a225815fcaf",
+      measurementId: "G-YYW79C4EXN"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    const PIN_ADMIN = "4354";
+    const TU_TELEFONO = "34698906201"; 
+    let carrito = [];
+    let productosCache = [];
+
+    // COMPRESOR IMAGEN
+    function comprimirImagen(archivo) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(archivo);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 800; 
+                    const scaleSize = MAX_WIDTH / img.width;
+                    canvas.width = MAX_WIDTH;
+                    canvas.height = img.height * scaleSize;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    canvas.toBlob((blob) => { resolve(blob); }, 'image/jpeg', 0.7);
+                }
+            }
+        });
+    }
+
+    async function subirImagenAFirebase(archivo, carpeta) {
+        const archivoComprimido = await comprimirImagen(archivo);
+        const nombreArchivo = Date.now() + ".jpg"; 
+        const storageRef = storage.ref(carpeta + "/" + nombreArchivo);
+        await storageRef.put(archivoComprimido);
+        return await storageRef.getDownloadURL();
+    }
+
+    // --- LÓGICA DE PRODUCTOS Y CARPETAS ---
+    function cargarProductos() {
+        const cont = document.getElementById('lista-productos');
+        const contCarpetas = document.getElementById('contenedor-carpetas');
+        
+        db.collection("productos").orderBy("fecha", "desc").get().then((querySnapshot) => {
+            cont.innerHTML = '';
+            productosCache = [];
+            
+            if (querySnapshot.empty) { 
+                cont.innerHTML = '<p>No hay productos.</p>'; 
+                return; 
+            }
+
+            // 1. Guardar productos y encontrar Carpetas Únicas
+            let carpetas = new Set();
+            querySnapshot.forEach((doc) => {
+                const prod = doc.data();
+                const id = doc.id;
+                // Si no tiene carpeta, le ponemos "Varios"
+                const cat = prod.categoria || "Varios"; 
+                carpetas.add(cat);
+                
+                // Guardamos en memoria con su categoría
+                productosCache.push({ id, ...prod, categoria: cat });
+            });
+
+            // 2. Crear Botones de Carpetas
+            contCarpetas.innerHTML = `<button class="btn-carpeta activo" onclick="filtrar('Todo', this)">Todo</button>`;
+            carpetas.forEach(cat => {
+                contCarpetas.innerHTML += `<button class="btn-carpeta" onclick="filtrar('${cat}', this)">${cat}</button>`;
+            });
+
+            // 3. Mostrar Todos los productos al principio
+            renderizarProductos(productosCache);
+            
+            verificarAdminVisual();
+        }).catch((error) => {
+            console.error(error);
+            cont.innerHTML = '<p style="color:red">Error cargando productos.</p>';
+        });
+    }
+
+    // Función para pintar los productos en pantalla
+    function renderizarProductos(lista) {
+        const cont = document.getElementById('lista-productos');
+        cont.innerHTML = '';
+        lista.forEach(prod => {
+            cont.innerHTML += `
+            <div class="producto-card">
+                <img src="${prod.imagen}" class="img-controlada">
+                <div class="info-prod">
+                    <small style="color:#aaa">${prod.categoria}</small>
+                    <h3>${prod.nombre}</h3>
+                    <p class="precio">${prod.precio} €</p>
+                    <button class="btn" onclick="addCarrito('${prod.id}')">Añadir</button>
+                    <button class="btn btn-danger admin-only" onclick="borrarProducto('${prod.id}')">Eliminar</button>
+                </div>
+            </div>`;
+        });
+        verificarAdminVisual(); // Asegurar que si soy admin veo los botones de borrar
+    }
+
+    // Función de filtrado
+    window.filtrar = function(categoria, btn) {
+        // Estilo visual del botón
+        document.querySelectorAll('.btn-carpeta').forEach(b => b.classList.remove('activo'));
+        btn.classList.add('activo');
+
+        if(categoria === 'Todo') {
+            renderizarProductos(productosCache);
+        } else {
+            const filtrados = productosCache.filter(p => p.categoria === categoria);
+            renderizarProductos(filtrados);
+        }
+    }
+
+    async function crearProducto() {
+        const nombre = document.getElementById('prodNombre').value;
+        const precio = parseFloat(document.getElementById('prodPrecio').value);
+        const categoria = document.getElementById('prodCategoria').value || "Varios"; // Leemos la carpeta
+        const inputFoto = document.getElementById('prodFoto');
+        const btn = document.getElementById('btnCrearProd');
+
+        if(!nombre || !precio || !inputFoto.files[0]) return alert("Faltan datos");
+        btn.innerText = "Subiendo..."; btn.disabled = true;
+
+        try {
+            const urlImagen = await subirImagenAFirebase(inputFoto.files[0], 'productos');
+            await db.collection("productos").add({
+                nombre: nombre, 
+                precio: precio, 
+                categoria: categoria, // Guardamos la carpeta
+                imagen: urlImagen, 
+                fecha: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            alert("Producto creado en carpeta: " + categoria);
+            document.getElementById('prodNombre').value = '';
+            document.getElementById('prodPrecio').value = '';
+            document.getElementById('prodCategoria').value = '';
+            inputFoto.value = '';
+            cargarProductos();
+        } catch (e) { alert("Error: " + e.message); }
+        btn.innerText = "Guardar Producto"; btn.disabled = false;
+    }
+
+    function borrarProducto(id) {
+        if(confirm("¿Borrar?")) {
+            db.collection("productos").doc(id).delete().then(() => cargarProductos());
+        }
+    }
+
+    // --- CARRITO ---
+    function addCarrito(id) {
+        const prod = productosCache.find(p => p.id === id);
+        if(prod) { carrito.push(prod); updateCarrito(); }
+    }
+    function updateCarrito() {
+        const lista = document.getElementById('lista-carrito');
+        const box = document.getElementById('carrito-flotante');
+        let total = 0; lista.innerHTML = '';
+        box.style.display = carrito.length > 0 ? 'block' : 'none';
+        carrito.forEach((p, i) => {
+            total += p.precio;
+            lista.innerHTML += `<li>${p.nombre} - ${p.precio}€ <span style="color:red;cursor:pointer" onclick="delCarrito(${i})">x</span></li>`;
+        });
+        document.getElementById('total-carrito').innerText = total;
+    }
+    function delCarrito(i) { carrito.splice(i,1); updateCarrito(); }
+    function limpiarCarrito() { carrito = []; updateCarrito(); }
+    function enviarPedidoWhatsApp() {
+        if(carrito.length===0) return;
+        let msg = "Hola, pedido web:%0A";
+        carrito.forEach(p => msg += `- ${p.nombre} (${p.precio}€)%0A`);
+        msg += `%0ATotal: ${document.getElementById('total-carrito').innerText}€`;
+        window.open(`https://wa.me/${TU_TELEFONO}?text=${msg}`, '_blank');
+    }
+
+    // --- GALERÍA ---
+    function cargarGalerias() {
+        const cont = document.getElementById('contenedor-galeria');
+        db.collection("galeria").orderBy("fecha", "desc").get().then((qs) => {
+            cont.innerHTML = '';
+            qs.forEach((doc) => {
+                const data = doc.data();
+                cont.innerHTML += `
+                <div class="galeria-item">
+                    <img src="${data.url}" class="img-controlada">
+                    <button class="btn btn-danger admin-only" onclick="borrarFotoGaleria('${doc.id}')" style="position:absolute; bottom:0; border-radius:0;">Eliminar</button>
+                </div>`;
+            });
+            verificarAdminVisual();
+        });
+    }
+    async function subirFotoGaleria() {
+        const file = document.getElementById('inputFotoGaleria').files[0];
+        const btn = document.getElementById('btnSubirGaleria');
+        if(!file) return alert("Elige foto");
+        btn.innerText = "Subiendo..."; btn.disabled = true;
+        try {
+            const url = await subirImagenAFirebase(file, 'galeria');
+            await db.collection("galeria").add({ url: url, fecha: firebase.firestore.FieldValue.serverTimestamp() });
+            cargarGalerias();
+        } catch(e) { alert(e.message); }
+        btn.innerText = "Subir Foto"; btn.disabled = false;
+    }
+    function borrarFotoGaleria(id) {
+        if(confirm("¿Borrar?")) db.collection("galeria").doc(id).delete().then(()=>cargarGalerias());
+    }
+
+    // --- RESEÑAS ---
+    function cargarResenas() {
+        const lista = document.getElementById('lista-resenas');
+        db.collection("resenas").orderBy("fecha", "desc").get().then((qs) => {
+            lista.innerHTML = '';
+            qs.forEach((doc) => {
+                const r = doc.data();
+                lista.innerHTML += `
+                <div style="border-bottom:1px solid #333; padding:10px;">
+                    <strong style="color:var(--color-principal)">${r.nombre}</strong>
+                    <p style="margin:5px 0; color:#ccc">"${r.texto}"</p>
+                    <button class="btn btn-danger admin-only" style="width:auto; padding:5px 10px; font-size:0.8rem" onclick="borrarResena('${doc.id}')">Borrar</button>
+                </div>`;
+            });
+            verificarAdminVisual();
+        });
+    }
+    function publicarResena() {
+        const n = document.getElementById('nombreResena').value;
+        const t = document.getElementById('textoResena').value;
+        if(!n || !t) return;
+        db.collection("resenas").add({ nombre: n, texto: t, fecha: firebase.firestore.FieldValue.serverTimestamp() })
+          .then(() => {
+              document.getElementById('nombreResena').value=''; 
+              document.getElementById('textoResena').value='';
+              cargarResenas();
+          });
+    }
+    function borrarResena(id) { if(confirm("¿Borrar?")) db.collection("resenas").doc(id).delete().then(()=>cargarResenas()); }
+
+    // --- TEXTO ---
+    function iniciarTexto() {
+        const p = document.getElementById('parrafo-inicio');
+        db.collection("configuracion").doc("inicio").get().then((doc) => {
+            if (doc.exists) p.innerText = doc.data().texto;
+            else p.innerText = "Bienvenidos. Somos expertos en instalaciones eléctricas.";
+        });
+    }
+    function editarTexto() {
+        const p = document.getElementById('parrafo-inicio');
+        const nuevo = prompt("Nuevo texto:", p.innerText);
+        if(nuevo) {
+            db.collection("configuracion").doc("inicio").set({ texto: nuevo })
+              .then(() => p.innerText = nuevo);
+        }
+    }
+
+    // --- ADMIN ---
+    function intentarLogin() {
+        if(prompt("PIN:") === PIN_ADMIN) { sessionStorage.setItem('isAdmin', 'true'); verificarAdminVisual(); alert("Admin Activado"); }
+    }
+    function verificarAdminVisual() {
+        if(sessionStorage.getItem('isAdmin')==='true') document.body.classList.add('is-admin');
+    }
+
+    window.onload = function() {
+        iniciarTexto(); cargarProductos(); cargarGalerias(); cargarResenas();
+    };
+</script>
+</body>
+</html>
